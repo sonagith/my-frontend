@@ -29,7 +29,7 @@ export const BookingCommissionCard: React.FC<BookingCommissionProps> = ({ caseDa
     const fetchStaff = async () => {
       try {
         const token = localStorage.getItem('token'); // agar token base auth hai
-        const response = await fetch('http://localhost:8000/api/settings/get-all', {
+        const response = await fetch('https://my-backend-mqrz.onrender.com/api/settings/get-all', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
