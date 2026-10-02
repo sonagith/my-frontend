@@ -1,5 +1,5 @@
 // src/services/api.ts
-export const API_URL = "https://my-backend-mqrz.onrender.com";
+export const API_URL = "http://127.0.0.1:8000";
 
 export const getAuthToken = () => {
   return localStorage.getItem('gharpilot_token');
@@ -191,4 +191,41 @@ export const assignStaffAPI = async (data: FormData) => {
   });
   if (!res.ok) throw new Error("Failed to assign staff");
   return res.json();
+};
+
+
+// 🔴 Notes APIs (GET, POST, PUT)
+export const fetchPlotNotesAPI = async (plotId: number) => {
+  const response = await fetch(`${API_URL}/api/dashboard/notes/${plotId}`, {
+    method: "GET",
+    headers: { "Authorization": `Bearer ${getAuthToken()}` }
+  });
+  if (!response.ok) throw new Error("Failed to fetch notes");
+  return response.json();
+};
+
+export const addPlotNoteAPI = async (data: { plot_id: number; note_text: string }) => {
+  const response = await fetch(`${API_URL}/api/dashboard/add-note`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getAuthToken()}`
+    },
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) throw new Error("Failed to add note");
+  return response.json();
+};
+
+export const updatePlotNoteAPI = async (noteId: number, data: { note_text: string }) => {
+  const response = await fetch(`${API_URL}/api/dashboard/update-note/${noteId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getAuthToken()}`
+    },
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) throw new Error("Failed to update note");
+  return response.json();
 };

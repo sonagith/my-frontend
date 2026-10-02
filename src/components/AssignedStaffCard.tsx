@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, Save, X, Phone, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { API_URL } from '../services/api'; // 🔴 IMPORT ADDED
 
 interface AssignedStaffProps {
   caseData: any;
@@ -19,7 +20,8 @@ export const AssignedStaffCard: React.FC<AssignedStaffProps> = ({ caseData, onRe
 
   // 1. Staff list fetch karna settings API se
   useEffect(() => {
-    fetch('https://my-backend-mqrz.onrender.com/api/settings/get-all')
+    // 🔴 HARDCODED URL REMOVED
+    fetch(`${API_URL}/api/settings/get-all`)
       .then(res => res.json())
       .then(data => {
         if (data && data.staff) {
@@ -49,7 +51,8 @@ export const AssignedStaffCard: React.FC<AssignedStaffProps> = ({ caseData, onRe
 
     const tid = toast.loading("Assigning recovery staff...");
     try {
-      const response = await fetch('https://my-backend-mqrz.onrender.com/api/dashboard/assign-staff', {
+      // 🔴 HARDCODED URL REMOVED
+      const response = await fetch(`${API_URL}/api/dashboard/assign-staff`, {
         method: 'POST',
         body: fd
       });
@@ -67,7 +70,6 @@ export const AssignedStaffCard: React.FC<AssignedStaffProps> = ({ caseData, onRe
     }
     setLoading(false);
   };
-
   return (
     <div className="card" style={{ padding: '20px', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
       

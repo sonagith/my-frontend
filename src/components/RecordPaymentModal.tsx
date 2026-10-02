@@ -1,6 +1,6 @@
 // src/components/RecordPaymentModal.tsx
-import React, { useState } from 'react';
-import { recordPaymentAPI } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { recordPaymentAPI, fetchSettingsData } from '../services/api';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -13,8 +13,11 @@ interface Props {
 export const RecordPaymentModal: React.FC<Props> = ({ isOpen, onClose, caseId, onSuccess }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // 🔴 API se aane wali agent list ko store karne ke liye state
+  const [staffList, setStaffList] = useState<any[]>([]);
 
-  // 🔴 Form ke saare fields ke liye state maintain karna taaki data cancel karne par bhi na mite
+  // Form ke saare fields ke liye state
   const [formDataState, setFormDataState] = useState({
     payment_date: new Date().toISOString().slice(0, 10),
     amount: '',
@@ -23,11 +26,32 @@ export const RecordPaymentModal: React.FC<Props> = ({ isOpen, onClose, caseId, o
     bank_name: '',
     drawn_on: '',
     received_date: new Date().toISOString().slice(0, 10),
-    booked_by: 'Anil Kumar Nair',
+    booked_by: '', // Ise blank rakhenge, taki by default 'Select Agent...' dikhe
     remark: '',
   });
 
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+
+  // 🔴 Settings Data (Agents List) Fetch karna
+  useEffect(() => {
+    if (isOpen) {
+      const getStaff = async () => {
+        try {
+          const res = await fetchSettingsData();
+          if (res && res.status === 'success' && res.staff) {
+            setStaffList(res.staff);
+            // Optional: Agar default pehla agent select karna hai toh:
+            // if (res.staff.length > 0) {
+            //   setFormDataState(prev => ({ ...prev, booked_by: res.staff[0].name }));
+            // }
+          }
+        } catch (err) {
+          console.error("Failed to fetch staff list", err);
+        }
+      };
+      getStaff();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -51,7 +75,12 @@ export const RecordPaymentModal: React.FC<Props> = ({ isOpen, onClose, caseId, o
       toast.error("Please enter amount");
       return;
     }
-    setShowConfirm(true); // Sirf confirmation screen open hogi, form data safe rahega
+    // Agent select kiya hai ya nahi uski checking
+    if (!formDataState.booked_by) {
+        toast.error("Please select who received the payment");
+        return;
+    }
+    setShowConfirm(true);
   };
 
   // Jab user popup mein "Yes, Save Payment" dabaye
@@ -78,6 +107,19 @@ export const RecordPaymentModal: React.FC<Props> = ({ isOpen, onClose, caseId, o
         await recordPaymentAPI(fd);
         toast.success('Payment & Receipt saved successfully!', { id: tid });
         setShowConfirm(false);
+        // Form ko reset karne ke liye taaki dubara kholne par purana data na ho
+        setFormDataState({
+            payment_date: new Date().toISOString().slice(0, 10),
+            amount: '',
+            cheque_no: '',
+            cheque_date: '',
+            bank_name: '',
+            drawn_on: '',
+            received_date: new Date().toISOString().slice(0, 10),
+            booked_by: '',
+            remark: '',
+        });
+        setReceiptFile(null);
         onClose();
         onSuccess(); // Database reload karega
     } catch(err: any) { 
@@ -100,7 +142,6 @@ export const RecordPaymentModal: React.FC<Props> = ({ isOpen, onClose, caseId, o
               Are you sure you want to make a payment of <b style={{ color: '#0f766e' }}>₹{formDataState.amount}</b>?
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-              {/* 🔴 Cancel & Edit dabane par data waisa hi rahega, sirf confirmation hatega */}
               <button 
                 type="button" 
                 className="btn btn-outline" 
@@ -140,12 +181,12 @@ export const RecordPaymentModal: React.FC<Props> = ({ isOpen, onClose, caseId, o
                 </div>
                 
                 <div className="field">
-                  <label>Cheque / Ref No</label>
+                  <label>Cheque / RTGS No</label>
                   <input name="cheque_no" placeholder="e.g. 552022 or UPI ref" value={formDataState.cheque_no} onChange={handleChange} />
                 </div>
                 
                 <div className="field">
-                  <label>Cheque Date</label>
+                  <label>Cheque / RTGS Date</label>
                   <input name="cheque_date" type="date" value={formDataState.cheque_date} onChange={handleChange} />
                 </div>
                 
@@ -164,12 +205,14 @@ export const RecordPaymentModal: React.FC<Props> = ({ isOpen, onClose, caseId, o
                   <input name="received_date" required type="date" value={formDataState.received_date} onChange={handleChange} />
                 </div>
                 
+                {/* 🔴 Dynamic Staff List Dropdown */}
                 <div className="field">
-                  <label>Booked By</label>
-                  <select name="booked_by" value={formDataState.booked_by} onChange={handleChange}>
-                    <option>Anil Kumar Nair</option>
-                    <option>Priya Subramaniam</option>
-                    <option>Deepak Menon</option>
+                  <label>Received By *</label>
+                  <select name="booked_by" required value={formDataState.booked_by} onChange={handleChange}>
+                    <option value="">Select Agent...</option>
+                    {staffList.map((staff, idx) => (
+                      <option key={idx} value={staff.name}>{staff.name}</option>
+                    ))}
                   </select>
                 </div>
                 

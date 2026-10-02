@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Upload } from 'lucide-react';
 import { State, City } from 'country-state-city'; 
-import toast from 'react-hot-toast'; // 🔴 Toast Import Add Kiya
-// import { fetchSettingsData, updateProfileAPI, updateAutomationAPI } from '../services/api';
+import toast from 'react-hot-toast';
 import { fetchSettingsData, updateProfileAPI, updateAutomationAPI, uploadLogoAPI, API_URL } from '../services/api';
 import { AddStaffModal } from './AddStaffModal';
 
@@ -19,7 +18,7 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
   const [auto, setAuto] = useState<any>({});
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
 
-  // 🔴 Dropdown States 🔴
+  // Dropdown States
   const [indiaStates] = useState(State.getStatesOfCountry('IN'));
   const [cities, setCities] = useState<any[]>([]);
 
@@ -31,7 +30,7 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
         setStaff(res.staff);
         setAuto(res.automation);
 
-        // Agar DB se state aaya hai, toh uske hisaab se pehle se city load kar lo
+        // State ke hisaab se city load karna
         if (res.profile?.state) {
           const matchedState = State.getStatesOfCountry('IN').find(s => s.name === res.profile.state);
           if (matchedState) {
@@ -39,16 +38,17 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
           }
         }
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err); 
+    }
     setLoading(false);
   };
 
   useEffect(() => { loadData(); }, []);
 
-  // 🔴 State Change Handler 🔴
   const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedStateName = e.target.value;
-    setProfile({ ...profile, state: selectedStateName, city: '' }); // Reset city on state change
+    setProfile({ ...profile, state: selectedStateName, city: '' });
     
     const matchedState = indiaStates.find(s => s.name === selectedStateName);
     if (matchedState) {
@@ -65,29 +65,40 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
     const pan = formData.get('pan') as string;
     const gstin = formData.get('gstin') as string;
 
-    // 🔴 EXACT FORMAT VALIDATIONS 🔴
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i; 
-    // Example: ABCDE1234F
-    
     const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i; 
-    // Example: 27ABCDE1234F1Z5
 
     if (pan && !panRegex.test(pan)) {
-      toast.error('Invalid PAN! e.g. ABCDE1234F'); // 🔴 Toast Error
+      toast.error('Invalid PAN format! e.g. ABCDE1234F');
       return;
     }
 
     if (gstin && !gstinRegex.test(gstin)) {
-      toast.error('Invalid GSTIN! e.g. 27ABCDE1234F1Z5'); // 🔴 Toast Error
+      toast.error('Invalid GSTIN format! e.g. 27ABCDE1234F1Z5');
       return;
     }
 
+    const toastId = toast.loading('Saving business profile...'); 
+
     try {
-      await updateProfileAPI(formData);
-      toast.success('Business profile saved successfully!'); // 🔴 Toast Success
+      const res = await updateProfileAPI(formData);
+      
+      if (res && res.status === 'error') {
+        toast.error(res.message || 'Failed to save profile. Please check the data.', { id: toastId });
+        return;
+      }
+
+      toast.success('Business profile saved successfully!', { id: toastId });
       triggerAppReload(); 
-    } catch (err) { 
-      toast.error('Error saving profile'); // 🔴 Toast Error
+
+    } catch (err: any) { 
+      const errorMsg = 
+        err?.response?.data?.message || 
+        err?.response?.data?.detail || 
+        err?.message || 
+        'An unexpected server error occurred';
+        
+      toast.error(errorMsg, { id: toastId }); 
     }
   };
 
@@ -97,15 +108,22 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
     formData.append('sms_on', auto.sms_on ? '1' : '0');
     formData.append('wa_on', auto.wa_on ? '1' : '0');
     formData.append('escalate_on', auto.escalate_on ? '1' : '0');
+    
+    const toastId = toast.loading('Saving automation settings...');
+    
     try {
-      await updateAutomationAPI(formData);
-      toast.success('Automation Schedule saved!'); // 🔴 Toast Success
-    } catch (err) { 
-      toast.error('Error saving automation'); // 🔴 Toast Error
+      const res = await updateAutomationAPI(formData);
+      if (res && res.status === 'error') {
+        toast.error(res.message || 'Failed to update settings', { id: toastId });
+        return;
+      }
+      toast.success('Automation Schedule saved!', { id: toastId });
+    } catch (err: any) { 
+      const errorMsg = err?.response?.data?.message || err?.response?.data?.detail || err?.message || 'Error saving automation';
+      toast.error(errorMsg, { id: toastId });
     }
   };
 
-  // 🔴 YAHAN PASTE KAREIN: Naya Logo Upload Handler 🔴
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -122,8 +140,9 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
         } else {
           toast.error(res.message || 'Upload failed', { id: toastId });
         }
-      } catch (err) {
-        toast.error('Server error during upload', { id: toastId });
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.response?.data?.detail || err?.message || 'Server error during upload';
+        toast.error(errorMsg, { id: toastId });
       }
     }
   };
@@ -146,7 +165,6 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
             <h3>Business Information</h3>
             <div className="card-sub">Manage your business details and account settings</div>
             
-            {/* 🔴 NAYA LOGO UPLOAD UI 🔴 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px dashed #d1d5db' }}>
               <div style={{ width: '64px', height: '64px', borderRadius: '8px', background: '#fff', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                 {profile.logo_url ? (
@@ -168,15 +186,12 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
               <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
                 <div className="field"><label>Business Name *</label><input name="business_name" defaultValue={profile.business_name} required/></div>
                 <div className="field"><label>Contact Person *</label><input name="owner_name" defaultValue={profile.owner_name} required/></div>
-                <div className="field"><label>Phone Number</label><input name="phone_number" defaultValue={profile.phone_number} /></div>
-                <div className="field"><label>Industry</label><input name="industry" defaultValue={profile.industry} /></div>
-                <div className="field"><label>GSTIN</label><input name="gstin" defaultValue={profile.gstin} placeholder="e.g. 27ABCDE1234F1Z5" style={{ textTransform: 'uppercase' }} /></div>
-                <div className="field"><label>PAN</label><input name="pan" defaultValue={profile.pan} placeholder="e.g. ABCDE1234F" style={{ textTransform: 'uppercase' }} /></div>
+                <div className="field"><label>Phone Number *</label><input name="phone_number" defaultValue={profile.phone_number} required/></div>
+                <div className="field"><label>PAN *</label><input name="pan" defaultValue={profile.pan} placeholder="e.g. ABCDE1234F" style={{ textTransform: 'uppercase' }} required/></div>
                 
-                {/* 🔴 CASCADING STATE DROPDOWN 🔴 */}
                 <div className="field">
-                  <label>State</label>
-                  <select name="state" value={profile.state || ""} onChange={handleStateChange} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', width: '100%' }}>
+                  <label>State *</label>
+                  <select name="state" value={profile.state || ""} onChange={handleStateChange} required style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', width: '100%' }}>
                     <option value="">Select State</option>
                     {indiaStates.map(s => (
                       <option key={s.isoCode} value={s.name}>{s.name}</option>
@@ -184,10 +199,9 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
                   </select>
                 </div>
 
-                {/* 🔴 CASCADING CITY DROPDOWN 🔴 */}
                 <div className="field">
-                  <label>City</label>
-                  <select name="city" value={profile.city || ""} onChange={(e) => setProfile({...profile, city: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', width: '100%' }} disabled={!profile.state}>
+                  <label>City *</label>
+                  <select name="city" value={profile.city || ""} onChange={(e) => setProfile({...profile, city: e.target.value})} required style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', width: '100%' }} disabled={!profile.state}>
                     <option value="">Select City</option>
                     {cities.map(c => (
                       <option key={c.name} value={c.name}>{c.name}</option>
@@ -195,7 +209,9 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
                   </select>
                 </div>
 
-                <div className="field"><label>PIN Code</label><input name="pin_code" type="number" defaultValue={profile.pin_code} placeholder="e.g. 462001" /></div>
+                <div className="field"><label>PIN Code *</label><input name="pin_code" type="number" defaultValue={profile.pin_code} placeholder="e.g. 462001" required/></div>
+                <div className="field"><label>Industry</label><input name="industry" defaultValue={profile.industry} /></div>
+                <div className="field"><label>GSTIN</label><input name="gstin" defaultValue={profile.gstin} placeholder="e.g. 27ABCDE1234F1Z5" style={{ textTransform: 'uppercase' }} /></div>
                 <div className="field"><label>RERA Registration No.</label><input name="rera_no" defaultValue={profile.rera_no} /></div>
               </div>
               <div className="modal-actions" style={{ justifyContent: 'flex-start', marginTop: '16px' }}>
@@ -253,6 +269,32 @@ export const Profile: React.FC<Props> = ({ onOpenIntegrations, triggerAppReload 
                   </div>
                 </div>
                 <div className={`toggle ${auto.wa_on ? 'on' : ''}`} onClick={() => setAuto({...auto, wa_on: !auto.wa_on})}>
+                  <div className="knob"></div>
+                </div>
+              </div>
+
+              {/* 🔴 NEW STATIC ROW: Email Reminder */}
+              <div className="toggle-row">
+                <div>
+                  <b style={{ fontSize: '13px' }}>Email Reminder</b>
+                  <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>
+                    Triggers on day <input className="day-input" type="number" value="14" disabled style={{width:'40px', padding:'2px', textAlign:'center', margin:'0 4px', border:'1px solid #e5e7eb', borderRadius:'4px', backgroundColor: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed'}} /> after due date
+                  </div>
+                </div>
+                <div className="toggle on" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                  <div className="knob"></div>
+                </div>
+              </div>
+
+              {/* 🔴 NEW STATIC ROW: AI Voice Call */}
+              <div className="toggle-row">
+                <div>
+                  <b style={{ fontSize: '13px' }}>AI Voice Call</b>
+                  <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>
+                    Triggers on day <input className="day-input" type="number" value="15" disabled style={{width:'40px', padding:'2px', textAlign:'center', margin:'0 4px', border:'1px solid #e5e7eb', borderRadius:'4px', backgroundColor: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed'}} /> after due date
+                  </div>
+                </div>
+                <div className="toggle on" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
                   <div className="knob"></div>
                 </div>
               </div>

@@ -17,9 +17,9 @@ export function pick<T>(arr: T[]): T {
 }
 
 export const STAFF = [
-  { id: 1, name: 'Anil Kumar Nair', role: 'Recovery Officer', phone: '+91 98470 11223', email: 'anil@gharpilot.in' },
-  { id: 2, name: 'Priya Subramaniam', role: 'Senior Sales Manager', phone: '+91 98470 55667', email: 'priya@gharpilot.in' },
-  { id: 3, name: 'Deepak Menon', role: 'Recovery Officer', phone: '+91 98470 99881', email: 'deepak@gharpilot.in' },
+  { id: 1, name: 'Anil Kumar Nair', role: 'Recovery Officer', phone: '+91 98470 11223', email: 'anil@intopilot.in' },
+  { id: 2, name: 'Priya Subramaniam', role: 'Senior Sales Manager', phone: '+91 98470 55667', email: 'priya@intopilot.in' },
+  { id: 3, name: 'Deepak Menon', role: 'Recovery Officer', phone: '+91 98470 99881', email: 'deepak@intopilot.in' },
 ];
 
 export const PROJECTS = [

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { updateCommissionInfoAPI } from '../services/api';
+import { updateCommissionInfoAPI, API_URL } from '../services/api'; // 🔴 IMPORT ADDED
 import { fmtINR } from '../utils/helpers';
 
 interface BookingCommissionProps {
@@ -12,24 +12,23 @@ interface BookingCommissionProps {
 export const BookingCommissionCard: React.FC<BookingCommissionProps> = ({ caseData, onRefresh }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [staffList, setStaffList] = useState<any[]>([]); // 🔴 Staff list state
+  const [staffList, setStaffList] = useState<any[]>([]);
   
   const p = caseData.plot || {};
   const extentSqft = p.extentSqft || 0;
 
-  // React State for Inputs
   const [formData, setFormData] = useState({
     bookedBy: '',
     commissionPerSqft: 0,
     commissionPaid: 0,
   });
 
-  // 🔴 API se Staff List fetch karna (settings/get-all se)
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const token = localStorage.getItem('token'); // agar token base auth hai
-        const response = await fetch('https://my-backend-mqrz.onrender.com/api/settings/get-all', {
+        const token = localStorage.getItem('token');
+        // 🔴 HARDCODED URL REMOVED
+        const response = await fetch(`${API_URL}/api/settings/get-all`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -45,7 +44,6 @@ export const BookingCommissionCard: React.FC<BookingCommissionProps> = ({ caseDa
     fetchStaff();
   }, []);
 
-  // Jab data reload ho, tab state update ho jaye
   useEffect(() => {
     setFormData({
       bookedBy: p.bookedBy !== '—' ? (p.bookedBy || '') : '',

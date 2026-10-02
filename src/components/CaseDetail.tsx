@@ -6,7 +6,15 @@ import { PlotInfoCard } from './PlotInfoCard';
 import { BookingCommissionCard } from './BookingCommissionCard';
 import { BuyerKYCCard } from './BuyerKYCCard';
 import { AssignedStaffCard } from './AssignedStaffCard';
-import { fetchSettingsData } from '../services/api'; // 🔴 Naya import DB se settings lane ke liye
+import { fetchSettingsData, API_URL } from '../services/api'; 
+import { ClientNotesCard } from './ClientNotesCard'; 
+
+const getFullFileUrl = (url: string) => {
+  if (!url || url === '—') return '#';
+  if (url.startsWith('http')) return url;
+  if (!url.startsWith('/')) url = '/' + url;
+  return `${API_URL}${url}`;
+};
 
 interface CaseDetailProps {
   cases: any[];
@@ -17,14 +25,12 @@ interface CaseDetailProps {
 }
 
 export const CaseDetail: React.FC<CaseDetailProps> = ({ cases, caseId, setActiveTab, openAddPaymentModal, onRefresh }) => {
-  // 🔴 Automation settings ke liye state
   const [autoSettings, setAutoSettings] = useState({
     sms_day: 11,
     wa_day: 13,
     escalate_day: 16
   });
 
-  // 🔴 Database se settings fetch karna
   useEffect(() => {
     const getSettings = async () => {
       try {
@@ -53,18 +59,20 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ cases, caseId, setActive
   const bal = balanceOf(c);
   const od = overdueDays(c);
 
-  // 🔴 Dynamic Steps calculation
   const graceEnd = autoSettings.sms_day > 0 ? autoSettings.sms_day - 1 : 10;
   
+  // 🔴 UPDATED: Stepper mein 2 nayi static fields add kar di hain
   const steps = [
     { label: 'Grace Period', day: `Day 0-${graceEnd}` },
     { label: 'SMS Reminder', day: `Day ${autoSettings.sms_day}` },
     { label: 'WhatsApp Reminder', day: `Day ${autoSettings.wa_day}` },
+    { label: 'Email Reminder', day: 'Day 14' },
+    { label: 'AI Voice Call', day: 'Day 15' },
     { label: 'Staff Escalation', day: `Day ${autoSettings.escalate_day}+` }
   ];
   
-  // Voice step hatne ke baad index ko adjust kiya
-  const stepIdx = { ontrack: 0, grace: 0, sms: 1, wa: 2, voice: 2, escalated: 3, paid: 3 }[st.key] ?? 0;
+  // 🔴 UPDATED: Index mapping taaki naye steps theek se highlight ho
+  const stepIdx = { ontrack: 0, grace: 0, sms: 1, wa: 2, email: 3, voice: 4, escalated: 5, paid: 5 }[st.key] ?? 0;
 
   let running = c.plot?.totalValue || 0;
   const ledgerRows = (c.payments || []).map((p: any) => {
@@ -73,7 +81,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ cases, caseId, setActive
   });
 
   return (
-    <div style={{ color: '#0D3613' }}> {/* 🔴 Default font color wrapper */}
+    <div style={{ color: '#0D3613' }}>
       <button className="btn btn-outline btn-sm" onClick={() => setActiveTab('clients')} style={{ marginBottom: '14px', color: '#0D3613', borderColor: '#0D3613' }}>
         &larr; Back to Recovery Clients
       </button>
@@ -81,7 +89,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ cases, caseId, setActive
       <div className="page-head">
         <div>
           <div style={{ fontSize: '11.5px', color: 'var(--muted)', fontWeight: 700 }}>{c.code}</div>
-          <h1 style={{ marginTop: '2px', color: '#0D3613' }}>{c.buyer?.name}</h1> {/* 🔴 Color applied */}
+          <h1 style={{ marginTop: '2px', color: '#0D3613' }}>{c.buyer?.name}</h1>
           <p style={{ color: '#0D3613' }}>
             {c.plot?.plotNumber} &middot; {c.plot?.project} &nbsp;
             <span dangerouslySetInnerHTML={{ __html: statusBadge(c.status) }} /> <span dangerouslySetInnerHTML={{ __html: badge(st.label, st.color) }} />
@@ -115,16 +123,16 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ cases, caseId, setActive
         <div className="card-sub" style={{ color: '#0D3613' }}>
           {st.key === 'paid' ? 'No outstanding balance.' : (od !== null ? `${od} day(s) since due date — current stage: ${st.label}` : 'Next installment not yet due.')}
         </div>
-        <div className="stepper">
+        <div className="stepper" style={{ overflowX: 'auto', paddingBottom: '10px' }}>
           {steps.map((s, i) => {
             const idx = i + 1;
             const cls = idx < stepIdx + 1 ? 'done' : (idx === stepIdx + 1 ? 'current' : '');
             return (
-              <div key={i} className={`step ${cls}`}>
+              <div key={i} className={`step ${cls}`} style={{ minWidth: '120px' }}>
                 <div className="step-line"></div>
                 <div className="step-dot">{idx < stepIdx + 1 ? '✓' : idx}</div>
-                <div className="step-label" style={{ color: '#0D3613' }}>{s.label}</div>
-                <div className="step-day">{s.day}</div>
+                <div className="step-label" style={{ color: '#0D3613', fontSize: '12px' }}>{s.label}</div>
+                <div className="step-day" style={{ fontSize: '11px' }}>{s.day}</div>
               </div>
             );
           })}
@@ -142,37 +150,62 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ cases, caseId, setActive
               </div>
               <button className="btn btn-sm btn-navy" onClick={() => openAddPaymentModal(c.id)}>+ Add Payment</button>
             </div>
-            <div className="table-wrap">
-              <table style={{ color: '#0D3613' }}>
+            
+            {/* 🔴 OVERFLOW AND ALIGNMENT FIX APPLIED HERE */}
+            <div className="table-wrap" style={{ overflowX: 'auto' }}>
+              <table style={{ color: '#0D3613', width: '100%', minWidth: '600px' }}>
                 <thead>
-                  <tr><th style={{ color: '#0D3613' }}>RN</th><th style={{ color: '#0D3613' }}>Date</th><th style={{ color: '#0D3613' }}>Amount</th><th style={{ color: '#0D3613' }}>Ch No</th><th style={{ color: '#0D3613' }}>Bank Name</th><th style={{ color: '#0D3613' }}>Remark</th><th style={{ color: '#0D3613' }}>Receipt</th></tr>
+                  <tr style={{ whiteSpace: 'nowrap' }}>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>RN</th>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Date</th>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Amount</th>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Cheque / RTGS No</th>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Bank Name</th>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Remark</th>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Receipt</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {(c.payments || []).map((p: any) => (
                     <tr key={p.rn}>
-                      <td>{p.rn}</td>
-                      <td>{fmtDate(p.date)}</td>
-                      <td style={{ fontWeight: 600 }}>{fmtINR(p.amount)}</td>
-                      <td>{p.chNo || '—'}</td>
-                      <td>{p.bankName || '—'}</td>
-                      <td>{p.remark || '—'}</td>
-                      <td>
+                      <td style={{ padding: '12px 8px' }}>{p.rn}</td>
+                      <td style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>{fmtDate(p.date)}</td>
+                      <td style={{ fontWeight: 600, padding: '12px 8px', whiteSpace: 'nowrap' }}>{fmtINR(p.amount)}</td>
+                      <td style={{ padding: '12px 8px' }}>{p.chNo || '—'}</td>
+                      <td style={{ padding: '12px 8px' }}>{p.bankName || '—'}</td>
+                      
+                      {/* 🔴 ELLIPSIS FIX WITH MAX-WIDTH */}
+                      <td 
+                        title={p.remark} 
+                        style={{ 
+                          padding: '12px 8px',
+                          maxWidth: '120px', 
+                          whiteSpace: 'nowrap', 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis' 
+                        }}
+                      >
+                        {p.remark}
+                      </td>
+                      
+                      <td style={{ padding: '12px 8px', textAlign: 'center' }}>
                         {p.receiptUrl ? (
                           <a 
-                            href={p.receiptUrl} 
+                            href={getFullFileUrl(p.receiptUrl)} 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             style={{ 
                               color: '#0D3613', 
                               display: 'inline-flex', 
                               alignItems: 'center',
-                              padding: '4px',
+                              justifyContent: 'center',
+                              padding: '6px',
                               borderRadius: '4px',
                               background: '#f4f5f9'
                             }}
                             title="View Receipt"
                           >
-                            <Eye size={18} />
+                            <Eye size={16} />
                           </a>
                         ) : (
                           '—'
@@ -188,20 +221,25 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ cases, caseId, setActive
           <div className="card">
             <h3 style={{ color: '#0D3613' }}>Total Payment Ledger</h3>
             <div className="card-sub" style={{ color: '#0D3613' }}>Running balance against total plot value {fmtINR(c.plot?.totalValue || 0)}</div>
-            <div className="table-wrap">
-              <table style={{ color: '#0D3613' }}>
+            <div className="table-wrap" style={{ overflowX: 'auto' }}>
+              <table style={{ color: '#0D3613', width: '100%', minWidth: '500px' }}>
                 <thead>
-                  <tr><th style={{ color: '#0D3613' }}>Sr</th><th style={{ color: '#0D3613' }}>Date</th><th style={{ color: '#0D3613' }}>Amount</th><th style={{ color: '#0D3613' }}>Cheque No</th><th style={{ color: '#0D3613' }}>Balance</th></tr>
+                  <tr style={{ whiteSpace: 'nowrap' }}>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Sr</th>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Date</th>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Amount</th>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Cheque / RTGS No</th>
+                    <th style={{ color: '#0D3613', padding: '12px 8px' }}>Balance</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {ledgerRows.map((r: any) => (
                     <tr key={r.rn}>
-                      <td>{r.rn}</td>
-                      <td>{fmtDate(r.date)}</td>
-                      <td>{fmtINR(r.amount)}</td>
-                      <td>{r.chNo}</td>
-                      <td><b style={{ color: '#0D3613' }}>{fmtINR(r.balance)}</b></td>
-                      {/* <td>{r.bookedBy}</td> */}
+                      <td style={{ padding: '12px 8px' }}>{r.rn}</td>
+                      <td style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</td>
+                      <td style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>{fmtINR(r.amount)}</td>
+                      <td style={{ padding: '12px 8px' }}>{r.chNo}</td>
+                      <td style={{ padding: '12px 8px' }}><b style={{ color: '#0D3613' }}>{fmtINR(r.balance)}</b></td>
                     </tr>
                   ))}
                 </tbody>
@@ -234,20 +272,16 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ cases, caseId, setActive
           <div style={{ marginBottom: '20px' }}>
             <PlotInfoCard caseData={c} onRefresh={onRefresh} />
           </div>
-
           <div style={{ marginBottom: '20px' }}>
              <BookingCommissionCard caseData={c} onRefresh={onRefresh} />
           </div>
-
           <div style={{ marginBottom: '20px' }}>
              <BuyerKYCCard caseData={c} onRefresh={onRefresh} />
           </div>
-
           <div style={{ marginBottom: '20px' }}>
              <AssignedStaffCard caseData={c} onRefresh={onRefresh} />
           </div>
-
-          <div className="card" style={{ background: '#fdfbf7', borderColor: '#fef3c7' }}>
+          <div className="card" style={{ background: '#fdfbf7', borderColor: '#fef3c7', marginBottom: '20px' }}>
             <h3 style={{ color: '#0D3613' }}>Statutory Notes</h3>
             <div className="card-sub" style={{ color: '#0D3613' }}>Applicable to plot sale agreements in India</div>
             <div className="esc-note" style={{ fontSize: '12px', lineHeight: '1.6', color: '#0D3613' }}>
@@ -256,6 +290,9 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ cases, caseId, setActive
               &bull; TDS @1% under Sec 194-IA applies if consideration exceeds ₹50 lakh.<br/>
               &bull; Verify Encumbrance Certificate &amp; RERA registration before final registration.
             </div>
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+             <ClientNotesCard caseData={c} />
           </div>
         </div>
       </div>

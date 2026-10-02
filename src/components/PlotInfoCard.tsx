@@ -2,8 +2,16 @@
 import React, { useState } from 'react';
 import { Edit2, Save, X, UploadCloud, Trash2, Eye, FileText, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { updatePlotInfoAPI, uploadPlotDocAPI, deletePlotDocAPI } from '../services/api';
+import { updatePlotInfoAPI, uploadPlotDocAPI, deletePlotDocAPI, API_URL } from '../services/api'; // 🔴 IMPORTED API_URL
 import { fmtINR } from '../utils/helpers';
+
+// 🔴 NAYA FUNCTION YAHAN BHI ADD KIYA HAI
+const getFullFileUrl = (url: string) => {
+  if (!url || url === '—') return '#';
+  if (url.startsWith('http')) return url;
+  if (!url.startsWith('/')) url = '/' + url;
+  return `${API_URL}${url}`;
+};
 
 interface PlotInfoProps {
   caseData: any;
@@ -29,8 +37,8 @@ export const PlotInfoCard: React.FC<PlotInfoProps> = ({ caseData, onRefresh }) =
     totalDp: caseData.totalDp || '',
     monthlyEmi: caseData.installmentAmount || '',
     registrationStatus: p.registrationStatus || 'Pending',
-    bookingDate: p.bookingDate || '', // <--- NAYA
-    endDate: p.endDate || ''          // <--- NAYA
+    bookingDate: p.bookingDate || '',
+    endDate: p.endDate || '' 
   });
 
   const [docName, setDocName] = useState('Registry');
@@ -102,7 +110,6 @@ export const PlotInfoCard: React.FC<PlotInfoProps> = ({ caseData, onRefresh }) =
     }
   };
 
-  // 🔴 Color applied to labels and values inside Plot Info Card
   const Row = ({ label, value, isBold = false }: { label: string, value: React.ReactNode, isBold?: boolean }) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
       <span style={{ color: '#0D3613', opacity: 0.8 }}>{label}</span>
@@ -114,7 +121,6 @@ export const PlotInfoCard: React.FC<PlotInfoProps> = ({ caseData, onRefresh }) =
     <div className="card" style={{ padding: '20px', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
-          {/* 🔴 Title Color Updated */}
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0D3613', marginBottom: '4px' }}>Plot Information</h3>
           <div className="card-sub" style={{ fontSize: '12.5px', color: '#0D3613', opacity: 0.8, fontWeight: 700, margin: 0 }}>Survey & financial details</div>
         </div>
@@ -169,20 +175,18 @@ export const PlotInfoCard: React.FC<PlotInfoProps> = ({ caseData, onRefresh }) =
           
           <Row label="Total DP" value={fmtINR(caseData.totalDp)} isBold />
           <Row label="Monthly EMI" value={fmtINR(caseData.installmentAmount)} isBold />
-          {/* <Row label="Months Passed" value="0" isBold />
-          <Row label="Months Left" value="0" isBold /> */}
 
           <div style={{ height: '1px', background: '#eef0f7', margin: '12px 0' }}></div>
 
           <Row label="Booking Date" value={p.bookingDate || '—'} isBold />
-          <Row label="End Date" value={p.endDate || '—'} isBold />  {/* <--- YEH NAYI ROW HAI */}
+          <Row label="End Date" value={p.endDate || '—'} isBold />
           <Row label="Registration Status" value={
             <span style={{ color: p.registrationStatus === 'Registered' ? '#15803d' : '#b45309' }}>{p.registrationStatus}</span>
           } isBold />
         </div>
       )}
 
-      {/* 🔴 Property Documents Section */}
+      {/* Property Documents Section */}
       <div style={{ marginTop: '24px', borderTop: '2px dashed #e2e8f0', paddingTop: '16px' }}>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -206,7 +210,8 @@ export const PlotInfoCard: React.FC<PlotInfoProps> = ({ caseData, onRefresh }) =
                   <span style={{ fontSize: '13px', fontWeight: 600, color: '#0D3613' }}>{doc.name}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <a href={doc.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#000', textDecoration: 'none', background: '#F5F0E6', padding: '4px 6px', borderRadius: '4px' }}>
+                  {/* 🔴 URL FIX YAHAN APPLY KIYA */}
+                  <a href={getFullFileUrl(doc.url)} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#000', textDecoration: 'none', background: '#F5F0E6', padding: '4px 6px', borderRadius: '4px' }}>
                     <Eye size={12}/> View
                   </a>
                   <button onClick={() => handleDeleteDoc(doc.id)} style={{ display: 'flex', alignItems: 'center', background: '#F5F0E6', border: 'none', color: '#dc2626', padding: '4px 6px', borderRadius: '4px', cursor: 'pointer' }}>

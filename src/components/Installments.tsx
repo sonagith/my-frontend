@@ -173,7 +173,7 @@ export const Installments: React.FC<InstallmentsProps> = ({ cases, projects, set
           <div className="card" style={{ padding: 0 }}>
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Sr</th><th>Date</th><th>Client</th><th>Plot</th><th>Project</th><th>Amount</th><th>Cheque No</th><th>Bank</th></tr></thead>
+                <thead><tr><th>Sr</th><th>Date</th><th>Client</th><th>Plot</th><th>Project</th><th>Amount</th><th>Cheque / RTGS No</th><th>Bank</th></tr></thead>
                 <tbody>
                   {pg.rows.map((r: any, idx: number) => (
                     <tr key={idx} className="clickable" onClick={() => { setSelectedCaseId(r.caseId); setActiveTab('case-detail'); }}>

@@ -1,8 +1,8 @@
 // src/components/RecoveryClients.tsx
 import React, { useState, useEffect } from 'react';
-import { Download } from 'lucide-react'; 
+import { Download, FileDown } from 'lucide-react'; 
 import { fmtINR, balanceOf, overdueDays, stageOf, statusBadge, badge, paginate } from '../utils/helpers';
-import { fetchSettingsData } from '../services/api'; // API function import kiya
+import { fetchSettingsData } from '../services/api';
 
 interface RecoveryClientsProps {
   cases: any[];
@@ -27,15 +27,15 @@ export const RecoveryClients: React.FC<RecoveryClientsProps> = ({
   const [searchQ, setSearchQ] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isBtnHovered, setIsBtnHovered] = useState(false); 
+  
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
-  // 🔴 Automation Settings ke liye state
   const [automationSettings, setAutomationSettings] = useState({
     sms_day: 11,
     wa_day: 13,
     escalate_day: 16
   });
 
-  // Component load hote hi settings fetch karo
   useEffect(() => {
     const getSettings = async () => {
       try {
@@ -64,10 +64,9 @@ export const RecoveryClients: React.FC<RecoveryClientsProps> = ({
   const btnColor = '#758A78';
   const btnHoverColor = '#5c6e5e';
 
-  // Dynamic Grace End Day (SMS aane se ek din pehle tak grace period)
   const graceEnd = automationSettings.sms_day > 0 ? automationSettings.sms_day - 1 : 10;
 
-  const handleExportCSV = () => {
+  const handleExportCSV = (excludeCash: boolean = false) => {
     const projectCases = cases.filter((c: any) => c.projectId === selectedProject);
     
     if (projectCases.length === 0) {
@@ -79,7 +78,7 @@ export const RecoveryClients: React.FC<RecoveryClientsProps> = ({
       "Case ID", "Status", "Buyer Name", "Phone", "Email", "Address",
       "Plot Number", "Booking Date", "Agreement No", "Extent (SqFt)", "Rate/SqFt", "Total Plot Value",
       "Total DP", "Installment Amount", "Next Due Date", "Due Balance", "Overdue Days",
-      "Payment S.No", "Payment Date", "Payment Amount", "Payment Mode/Bank", "Ref/Cheque No", "Payment Remark", "Received By"
+      "Payment S.No", "Payment Date", "Payment Amount", "Payment Mode/Bank", "Cheque / RTGS No", "Payment Remark", "Received By"
     ];
     
     const rows = projectCases.flatMap((c: any) => {
@@ -106,8 +105,17 @@ export const RecoveryClients: React.FC<RecoveryClientsProps> = ({
         od && od > 0 ? od : 0
       ];
 
-      if (c.payments && c.payments.length > 0) {
-        return c.payments.map((p: any) => {
+      let payments = c.payments || [];
+      if (excludeCash) {
+        payments = payments.filter((p: any) => {
+          const bankName = (p.bankName || "").toLowerCase();
+          const remark = (p.remark || "").toLowerCase();
+          return !bankName.includes("cash") && !remark.includes("cash");
+        });
+      }
+
+      if (payments.length > 0) {
+        return payments.map((p: any) => {
           const paymentData = [
             p.rn || "—",
             p.date || "—",
@@ -131,7 +139,10 @@ export const RecoveryClients: React.FC<RecoveryClientsProps> = ({
     
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `${proj.name.replace(/\s+/g, '_')}_Complete_Data.csv`);
+    
+    const fileSuffix = excludeCash ? "_No_Cash_Data.csv" : "_Complete_Data.csv";
+    link.setAttribute("download", `${proj.name.replace(/\s+/g, '_')}${fileSuffix}`);
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -146,18 +157,59 @@ export const RecoveryClients: React.FC<RecoveryClientsProps> = ({
         </div>
         
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            onClick={handleExportCSV}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '6px', 
-              backgroundColor: '#fff', border: `1px solid ${btnColor}`, 
-              color: btnColor, padding: '10px 16px', borderRadius: '8px', 
-              cursor: 'pointer', fontWeight: 600, fontSize: '14px'
-            }}
-          >
-            <Download size={16} /> Export
-          </button>
           
+          <div 
+            style={{ position: 'relative' }} 
+            onMouseLeave={() => setShowExportMenu(false)}
+          >
+            <button 
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '6px', 
+                backgroundColor: '#fff', border: `1px solid ${btnColor}`, 
+                color: btnColor, padding: '10px 16px', borderRadius: '8px', 
+                cursor: 'pointer', fontWeight: 600, fontSize: '14px'
+              }}
+            >
+              <Download size={16} /> Export ▼
+            </button>
+
+            {showExportMenu && (
+              <div style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: '6px',
+                backgroundColor: '#fff', border: '1px solid #e5e7eb',
+                borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                minWidth: '180px', zIndex: 10, display: 'flex', flexDirection: 'column',
+                overflow: 'hidden'
+              }}>
+                <button 
+                  onClick={() => { handleExportCSV(false); setShowExportMenu(false); }}
+                  style={{
+                    padding: '12px 14px', textAlign: 'left', background: 'none', 
+                    border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer',
+                    fontSize: '13.5px', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Download size={14} /> Export All
+                </button>
+                <button 
+                  onClick={() => { handleExportCSV(true); setShowExportMenu(false); }}
+                  style={{
+                    padding: '12px 14px', textAlign: 'left', background: 'none', 
+                    border: 'none', cursor: 'pointer',
+                    fontSize: '13.5px', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <FileDown size={14} /> Export (No Cash)
+                </button>
+              </div>
+            )}
+          </div>
+
           <button 
             onClick={openAddClientModal}
             style={{ 
@@ -191,12 +243,13 @@ export const RecoveryClients: React.FC<RecoveryClientsProps> = ({
         })}
       </div>
 
-      {/* 🔴 DYNAMIC REMINDER BANNER (VOICE HATAYA) */}
       <div className="card" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', marginBottom: '20px' }}>
         <b style={{ fontSize: '13px', color: '#15803d' }}>Reminder rule:</b>
         <span style={{ fontSize: '13px', color: '#166534', marginLeft: '6px' }}> 
           Day {automationSettings.sms_day} &rarr; SMS &nbsp;&middot;&nbsp; 
           Day {automationSettings.wa_day} &rarr; WhatsApp &nbsp;&middot;&nbsp; 
+          Day 14 &rarr; Email &nbsp;&middot;&nbsp; 
+          Day 15 &rarr; AI Voice &nbsp;&middot;&nbsp; 
           Day {automationSettings.escalate_day}+ &rarr; Escalated to recovery staff.
         </span>
       </div>
@@ -225,16 +278,18 @@ export const RecoveryClients: React.FC<RecoveryClientsProps> = ({
         const bal = balanceOf(c);
         const od = overdueDays(c);
         
-        // 🔴 DYNAMIC STEPS ARRAY (VOICE HATAYA)
+        // 🔴 UPDATED: 6 Steps added with Email and AI Voice (short names for small cards)
         const steps = [
           { label: 'Grace', day: `Day 0-${graceEnd}` },
           { label: 'SMS', day: `Day ${automationSettings.sms_day}` },
           { label: 'WhatsApp', day: `Day ${automationSettings.wa_day}` },
+          { label: 'Email', day: 'Day 14' },
+          { label: 'AI Voice', day: 'Day 15' },
           { label: 'Escalated', day: `Day ${automationSettings.escalate_day}+` }
         ];
         
-        // Step logic ko bhi update kiya (voice step nikal diya, to index shift ho gaye)
-        const stepIdx = { ontrack: 0, grace: 0, sms: 1, wa: 2, escalated: 3, paid: 3 }[st.key] ?? 0;
+        // 🔴 UPDATED: Status Index Map adjusted for 6 items
+        const stepIdx = { ontrack: 0, grace: 0, sms: 1, wa: 2, email: 3, voice: 4, escalated: 5, paid: 5 }[st.key] ?? 0;
 
         return (
           <div 
@@ -255,16 +310,17 @@ export const RecoveryClients: React.FC<RecoveryClientsProps> = ({
               </div>
             </div>
 
-            <div className="stepper">
+            {/* 🔴 Added overflowX for horizontal scrolling if items get squished */}
+            <div className="stepper" style={{ overflowX: 'auto', paddingBottom: '8px' }}>
               {steps.map((s, i) => {
                 const idx = i + 1;
                 const cls = idx < stepIdx + 1 ? 'done' : (idx === stepIdx + 1 ? 'current' : '');
                 return (
-                  <div key={i} className={`step ${cls}`}>
+                  <div key={i} className={`step ${cls}`} style={{ minWidth: '75px' }}>
                     <div className="step-line"></div>
                     <div className="step-dot">{idx < stepIdx + 1 ? '✓' : idx}</div>
-                    <div className="step-label">{s.label}</div>
-                    <div className="step-day">{s.day}</div>
+                    <div className="step-label" style={{ fontSize: '11px' }}>{s.label}</div>
+                    <div className="step-day" style={{ fontSize: '10px' }}>{s.day}</div>
                   </div>
                 );
               })}

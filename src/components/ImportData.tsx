@@ -37,7 +37,7 @@ export const ImportData: React.FC<Props> = ({ projects, onSuccess }) => {
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
     const ws_data = [
-      ["Buyer Name", "Phone", "Email", "Address", "Plot Number", "Booking Date", "Agreement No", "Extent (SqFt)", "Rate/SqFt", "Total Plot Value", "Total DP", "Installment Amount", "Next Due Date", "Due Balance", "Payment Date", "Amount", "Mode/Bank", "Ref/Cheque No", "Remarks"]
+      ["Buyer Name", "Phone", "Email", "Address", "Plot Number", "Booking Date", "Agreement No", "Extent (SqFt)", "Rate/SqFt", "Total Plot Value", "Total DP", "Installment Amount", "Next Due Date", "Due Balance", "Payment Date", "Amount", "Mode/Bank", "Cheque / RTGS No", "Remarks"]
     ];
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
     XLSX.utils.book_append_sheet(wb, ws, "Import_Data");

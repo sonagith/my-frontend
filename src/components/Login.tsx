@@ -15,8 +15,8 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
-  const [email, setEmail] = useState('aosaf@greenvalleygroup.com');
-  const [password, setPassword] = useState('aosaf@123');
+  const [email, setEmail] = useState('atishay@ascentiqai.com');
+  const [password, setPassword] = useState('atishay@123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 

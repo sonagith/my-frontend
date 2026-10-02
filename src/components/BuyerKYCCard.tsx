@@ -2,7 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, Save, X, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { updateKycInfoAPI } from '../services/api';
+import { updateKycInfoAPI, API_URL } from '../services/api'; // 🔴 IMPORTED API_URL
+
+// 🔴 NAYA FUNCTION YAHAN BHI
+const getFullFileUrl = (url: string) => {
+  if (!url || url === '—') return '#';
+  if (url.startsWith('http')) return url;
+  if (!url.startsWith('/')) url = '/' + url;
+  return `${API_URL}${url}`;
+};
 
 interface BuyerKYCProps {
   caseData: any;
@@ -14,7 +22,6 @@ export const BuyerKYCCard: React.FC<BuyerKYCProps> = ({ caseData, onRefresh }) =
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Form State
   const [formData, setFormData] = useState({
     name: '', phone: '', email: '', address: '',
     pan: '', aadhaar: '', nationalId: '',
@@ -31,7 +38,7 @@ export const BuyerKYCCard: React.FC<BuyerKYCProps> = ({ caseData, onRefresh }) =
       email: buyerData.email && buyerData.email !== '—' ? buyerData.email : '',
       address: buyerData.address && buyerData.address !== '—' ? buyerData.address : '',
       pan: buyerData.pan && buyerData.pan !== '—' ? buyerData.pan : '',
-      aadhaar: '', // Keep empty for editing security
+      aadhaar: '', 
       nationalId: buyerData.nationalId && buyerData.nationalId !== '—' ? buyerData.nationalId : '',
     });
   }, [caseData, buyerData]);
@@ -78,9 +85,10 @@ export const BuyerKYCCard: React.FC<BuyerKYCProps> = ({ caseData, onRefresh }) =
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <span style={{ fontWeight: 500, color: '#0D3613', textAlign: 'right', maxWidth:'180px', wordWrap:'break-word' }}>{value}</span>
         {docUrl && (
-             <a href={docUrl} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#000', textDecoration: 'none', background: '#F5F0E6', padding: '4px 8px', borderRadius: '4px' }}>
-             <Eye size={12}/> View Doc
-           </a>
+          /* 🔴 URL FIX YAHAN */
+          <a href={getFullFileUrl(docUrl)} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#000', textDecoration: 'none', background: '#F5F0E6', padding: '4px 8px', borderRadius: '4px' }}>
+            <Eye size={12}/> View Doc
+          </a>
         )}
       </div>
     </div>
@@ -110,7 +118,6 @@ export const BuyerKYCCard: React.FC<BuyerKYCProps> = ({ caseData, onRefresh }) =
             
             <div style={{gridColumn:'span 2', height:'1px', background:'#cbd5e1', margin:'10px 0'}}></div>
 
-            {/* PAN */}
             <div>
               <label style={{fontSize:'12px', color:'#0D3613', fontWeight: 600, display:'block', marginBottom:'4px'}}>PAN Number</label>
               <input type="text" className="form-input" value={formData.pan} onChange={e => setFormData({...formData, pan: e.target.value})} style={{width:'100%', padding:'6px', border:'1px solid #cbd5e1', borderRadius:'4px', fontSize:'13px', color: '#0D3613'}} />
@@ -120,7 +127,6 @@ export const BuyerKYCCard: React.FC<BuyerKYCProps> = ({ caseData, onRefresh }) =
               <input type="file" onChange={e => setPanFile(e.target.files ? e.target.files[0] : null)} style={{width:'100%', padding:'4px', background:'#fff', border:'1px solid #cbd5e1', borderRadius:'4px', fontSize:'11px', color: '#0D3613'}} />
             </div>
 
-            {/* AADHAAR */}
             <div>
               <label style={{fontSize:'12px', color:'#0D3613', fontWeight: 600, display:'block', marginBottom:'4px'}}>Aadhar ID</label>
               <input type="text" className="form-input" placeholder="Enter ID to update" value={formData.aadhaar} onChange={e => setFormData({...formData, aadhaar: e.target.value})} style={{width:'100%', padding:'6px', border:'1px solid #cbd5e1', borderRadius:'4px', fontSize:'13px', color: '#0D3613'}} />
@@ -130,7 +136,6 @@ export const BuyerKYCCard: React.FC<BuyerKYCProps> = ({ caseData, onRefresh }) =
               <input type="file" onChange={e => setAadhaarFile(e.target.files ? e.target.files[0] : null)} style={{width:'100%', padding:'4px', background:'#fff', border:'1px solid #cbd5e1', borderRadius:'4px', fontSize:'11px', color: '#0D3613'}} />
             </div>
 
-            {/* NATIONAL ID */}
              <div>
               <label style={{fontSize:'12px', color:'#0D3613', fontWeight: 600, display:'block', marginBottom:'4px'}}>National Govt. ID</label>
               <input type="text" className="form-input" value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} style={{width:'100%', padding:'6px', border:'1px solid #cbd5e1', borderRadius:'4px', fontSize:'13px', color: '#0D3613'}} />
@@ -139,7 +144,6 @@ export const BuyerKYCCard: React.FC<BuyerKYCProps> = ({ caseData, onRefresh }) =
               <label style={{fontSize:'12px', color:'#0D3613', fontWeight: 600, display:'block', marginBottom:'4px'}}>{buyerData.nationalIdDocUrl ? 'Replace National ID Doc' : 'Upload Other ID Doc'}</label>
               <input type="file" onChange={e => setNidFile(e.target.files ? e.target.files[0] : null)} style={{width:'100%', padding:'4px', background:'#fff', border:'1px solid #cbd5e1', borderRadius:'4px', fontSize:'11px', color: '#0D3613'}} />
             </div>
-
           </div>
           
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
@@ -157,7 +161,7 @@ export const BuyerKYCCard: React.FC<BuyerKYCProps> = ({ caseData, onRefresh }) =
           <Row label="Address" value={<span style={{ maxWidth: '180px', display: 'inline-block' }}>{buyerData.address || '—'}</span>} />
           <div style={{ height: '1px', background: '#eef0f7', margin: '12px 0' }}></div>
           <Row label="PAN" value={buyerData.pan || '—'} docUrl={buyerData.panDocUrl} />
-          <Row label="Aadhar ID" value={buyerData.aadhaar || '[Redacted]'} docUrl={buyerData.aadhaarDocUrl} />
+          <Row label="Aadhar ID" value={buyerData.aadhaar || '[Aadhaar Redacted]'} docUrl={buyerData.aadhaarDocUrl} />
           <Row label="National ID" value={buyerData.nationalId || '—'} docUrl={buyerData.nationalIdDocUrl} />
         </div>
       )}
